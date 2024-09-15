@@ -1,0 +1,4 @@
+numpy
+notebook
+matplotlib
+imageio
