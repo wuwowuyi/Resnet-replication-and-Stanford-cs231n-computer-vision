@@ -30,8 +30,8 @@ X_train -= train_mean
 X_train /= train_std
 X_test -= train_mean
 X_test /= train_std
-X_train.astype(np.float32)
-X_test.astype(np.float32)
+X_train = X_train.astype(np.float32)
+X_test = X_test.astype(np.float32)
 
 num_folds = 5
 k_choices = [1, 3, 5, 8, 10, 12, 15, 20, 50, 100]
@@ -70,6 +70,7 @@ k_to_accuracies = {}
 for k in k_choices:
     k_to_accuracies[k] = []
     for i in range(num_folds):
+        print(f"choice k = {k}, i = {i}")
         if i == 0:
             X_i = np.concatenate(X_train_folds[1:])
             y_i = np.concatenate(y_train_folds[1:])
@@ -77,8 +78,8 @@ for k in k_choices:
             X_i = np.concatenate(X_train_folds[:i])
             y_i = np.concatenate(y_train_folds[:i])
         else:
-            X_i = np.concatenate((X_train_folds[:i], X_train_folds[i+1:]))
-            y_i = np.concatenate((y_train_folds[:i], y_train_folds[i+1:]))
+            X_i = np.concatenate((*X_train_folds[:i], *X_train_folds[i+1:]))
+            y_i = np.concatenate((*y_train_folds[:i], *y_train_folds[i+1:]))
         classifier = KNearestNeighbor()
         classifier.train(X_i, y_i)
         dists = classifier.compute_distances_one_loop(X_train_folds[i])

@@ -29,8 +29,8 @@ X_train -= train_mean
 X_train /= train_std
 X_test -= train_mean
 X_test /= train_std
-X_train.astype(np.float32)
-X_test.astype(np.float32)
+X_train = X_train.astype(np.float32)
+X_test = X_test.astype(np.float32)
 
 
 # Create a kNN classifier instance.
