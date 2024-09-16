@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -21,6 +22,16 @@ y_test = y_test[:num_test]
 X_train = np.reshape(X_train, (X_train.shape[0], -1))
 X_test = np.reshape(X_test, (X_test.shape[0], -1))
 print(X_train.shape, X_test.shape)
+
+train_mean = X_train.mean(axis=0)
+train_std = X_train.std(axis=0)
+X_train -= train_mean
+X_train /= train_std
+X_test -= train_mean
+X_test /= train_std
+X_train.astype(np.float32)
+X_test.astype(np.float32)
+
 
 # Create a kNN classifier instance.
 # Remember that training a kNN classifier is a noop:
@@ -64,6 +75,8 @@ if difference < 0.001:
     print('Good! The distance matrices are the same')
 else:
     print('Uh-oh! The distance matrices are different')
+
+del dists_one  # to free up memory
 
 
 # Now implement the fully vectorized version inside compute_distances_no_loops

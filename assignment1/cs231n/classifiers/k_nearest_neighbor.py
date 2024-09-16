@@ -132,7 +132,7 @@ class KNearestNeighbor(object):
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
         X = np.expand_dims(X, axis=1)
-        squares = np.square(X - self.X_train).reshape(num_test, num_train, -1)
+        squares = np.square(X - self.X_train, dtype=np.float32).reshape(num_test, num_train, -1)
         dists = np.sqrt(np.sum(squares, axis=-1))
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
