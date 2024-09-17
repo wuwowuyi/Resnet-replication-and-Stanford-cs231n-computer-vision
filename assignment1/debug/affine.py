@@ -2,11 +2,7 @@ import numpy as np
 
 from cs231n.gradient_check import eval_numerical_gradient_array
 from cs231n.layers import affine_forward, affine_backward
-
-
-def rel_error(x, y):
-  """ returns relative error """
-  return np.max(np.abs(x - y) / (np.maximum(1e-8, np.abs(x) + np.abs(y))))
+from debug.utils import rel_error
 
 num_inputs = 2
 input_shape = (4, 5, 6)

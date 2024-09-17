@@ -5,7 +5,6 @@ from cs231n.data_utils import load_CIFAR10
 
 cifar10_dir = Path(__file__).parent.parent / 'cs231n/datasets/cifar-10-batches-py'
 
-
 def get_CIFAR10_data(num_training=49000, num_validation=1000, num_test=1000, num_dev=500):
     X_train, y_train, X_test, y_test = load_CIFAR10(cifar10_dir)
 
@@ -66,3 +65,8 @@ def get_CIFAR10_data(num_training=49000, num_validation=1000, num_test=1000, num
     X_dev = np.hstack([X_dev, np.ones((X_dev.shape[0], 1))])
 
     return X_train, y_train, X_val, y_val, X_test, y_test, X_dev, y_dev
+
+
+def rel_error(x, y):
+  """ returns relative error """
+  return np.max(np.abs(x - y) / (np.maximum(1e-8, np.abs(x) + np.abs(y))))
