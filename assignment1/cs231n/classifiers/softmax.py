@@ -33,7 +33,8 @@ def softmax_loss_naive(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    loss, dW = softmax_loss_vectorized(W, X, y, reg)
+
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -58,7 +59,24 @@ def softmax_loss_vectorized(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    # normalize data by dividing train std first
+    N, _ = X.shape
+    logits = X @ W  # shape=(N, C)
+    #class_max = np.max(logits, axis=1, keepdims=True)  # shape=(N, 1)
+    #logits_exp = np.exp(logits - class_max)
+    logits_exp = np.exp(logits)  # shape=(N, C)
+    sumexp = np.sum(logits_exp, axis=1)  # shape=(N,)
+    logsumexp = np.log(sumexp)  # shape=(N,)
+    loss = -np.sum(logits[np.arange(N), y] - logsumexp)  # negative prob of the correct class
+    loss /= N
+    loss += reg * np.sum(W * W)
+
+    # chain rule
+    dlogits = logits_exp / sumexp.reshape(N, 1)  # shape=(N, C)
+    dlogits[np.arange(N), y] -= 1
+    dW = X.T @ dlogits  # shape=(D, C)
+    dW /= N
+    dW += 2 * reg * W
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
