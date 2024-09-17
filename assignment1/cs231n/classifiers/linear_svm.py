@@ -82,7 +82,7 @@ def svm_loss_vectorized(W, X, y, reg):
 
     N, D = X.shape
     scores = X @ W   # shape=(N, C)
-    correct = scores[np.arange(N), y]  # shape=(N, 1)
+    correct = scores[np.arange(N), y]  # shape=(N,)
     diff = scores - correct.reshape(N, 1) + 1   # shape=(N, C)
     diff[np.arange(N), y] = 0   # set correct class back to zero
     loss = np.sum(np.where(diff > 0, diff, 0)) / N
@@ -101,10 +101,16 @@ def svm_loss_vectorized(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    dW += np.sum(X, axis=0).reshape(D, 1)  # shape=(D, C)
-    count = np.sum(np.where(diff > 0, 1, 0), axis=1) + 1  # +1 to cancel gradients of correct class.
-    for i in range(N):
-        dW[:, y[i]] -= X[i] * count[i]
+    # dW += np.sum(X, axis=0).reshape(D, 1)  # shape=(D, C)
+    # count = np.sum(np.where(diff > 0, 1, 0), axis=1) + 1  # +1 to cancel gradients of correct class.
+    # for i in range(N):
+    #     dW[:, y[i]] -= X[i] * count[i]
+
+    # chain rule is easier
+    dscores = np.where(diff > 0, 1.0, 0)
+    count = np.sum(np.where(diff > 0, 1, 0), axis=1)
+    dscores[np.arange(N), y] -= count
+    dW = X.T @ dscores
     dW /= N
     dW += 2 * reg * W
 

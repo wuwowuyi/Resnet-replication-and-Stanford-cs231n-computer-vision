@@ -777,7 +777,16 @@ def svm_loss(x, y):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, _ = x.shape
+    correct = x[np.arange(N), y]  # shape=(N,)
+    diff = x - correct.reshape(N, 1) + 1  # shape=(N, C)
+    diff[np.arange(N), y] = 0  # set correct class back to zero
+    loss = np.sum(np.where(diff > 0, diff, 0)) / N
+
+    dx = np.where(diff > 0, 1.0, 0)
+    count = np.sum(np.where(diff > 0, 1, 0), axis=1)
+    dx[np.arange(N), y] -= count
+    dx /= N
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -807,7 +816,16 @@ def softmax_loss(x, y):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, _ = x.shape
+    logits_exp = np.exp(x)  # shape=(N, C)
+    sumexp = np.sum(logits_exp, axis=1)  # shape=(N,)
+    logsumexp = np.log(sumexp)  # shape=(N,)
+    loss = -np.sum(x[np.arange(N), y] - logsumexp)  # negative prob of the correct class
+    loss /= N
+
+    dx = logits_exp / sumexp.reshape(N, 1)  # shape=(N, C)
+    dx[np.arange(N), y] -= 1
+    dx /= N
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################

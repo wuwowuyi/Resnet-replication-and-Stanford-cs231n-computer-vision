@@ -28,8 +28,8 @@ f = lambda w: svm_loss_naive(w, X_dev, y_dev, 5e1)[0]
 grad_numerical = grad_check_sparse(f, W, grad)
 
 
-loss_naive, grad_naive = svm_loss_naive(W, X_dev, y_dev, 0.000005)
-loss_vectorized, grad_vectorized = svm_loss_vectorized(W, X_dev, y_dev, 0.000005)
+loss_naive, grad_naive = svm_loss_naive(W, X_dev, y_dev, 0.0005)
+loss_vectorized, grad_vectorized = svm_loss_vectorized(W, X_dev, y_dev, 0.005)
 print('loss difference: %f' % (loss_naive - loss_vectorized))
 difference = np.linalg.norm(grad_naive - grad_vectorized, ord='fro')
 print('gradient difference: %f' % difference)
