@@ -106,7 +106,7 @@ class KNearestNeighbor(object):
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
 
-    def compute_distances_no_loops(self, X):
+    def compute_distances_no_loops(self, X, batch_size=100):
         """
         Compute the distance between each test point in X and each training point
         in self.X_train using no explicit loops.
@@ -132,8 +132,11 @@ class KNearestNeighbor(object):
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
         X = np.expand_dims(X, axis=1)
-        squares = np.square(X - self.X_train, dtype=np.float32).reshape(num_test, num_train, -1)
-        dists = np.sqrt(np.sum(squares, axis=-1))
+        assert num_train % batch_size == 0
+        for start in range(0, num_train, batch_size):
+            batch = slice(start, start + batch_size)
+            squares = np.square(X - self.X_train[batch], dtype=np.float32).reshape(num_test, batch_size, -1)
+            dists[:, batch] = np.sqrt(np.sum(squares, axis=-1))
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
