@@ -1,12 +1,9 @@
-from __future__ import print_function
-
-from builtins import object
 
 from ..classifiers.linear_svm import *
 from ..classifiers.softmax import *
 
 
-class LinearClassifier(object):
+class LinearClassifier:
     def __init__(self):
         self.W = None
 
@@ -64,7 +61,8 @@ class LinearClassifier(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            indices = np.random.randint(0, num_train, batch_size)
+            X_batch, y_batch = X[indices], y[indices]
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -79,7 +77,7 @@ class LinearClassifier(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            self.W -= learning_rate * grad
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -109,12 +107,12 @@ class LinearClassifier(object):
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        y_pred = np.argmax(X @ self.W, axis=1)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return y_pred
 
-    def loss(self, X_batch, y_batch, reg):
+    def loss(self, X_batch, y_batch, reg) -> (float, np.ndarray):
         """
         Compute the loss function and its derivative.
         Subclasses will override this.
