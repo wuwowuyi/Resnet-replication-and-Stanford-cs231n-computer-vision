@@ -382,7 +382,14 @@ def layernorm_forward(x, gamma, beta, ln_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    mean = np.mean(x.T, axis=0)  # shape=(N,)
+    x_centered = x.T - mean      # shape=(D, N)
+    variance = np.var(x_centered, axis=0)  # shape=(N,)
+    inv_sqrt_variance_eps = 1 / np.sqrt(variance + eps)  # shape=(N,)
+    x_hat = (x_centered * inv_sqrt_variance_eps).T  # shape=(N, D)
+    out = gamma * x_hat + beta  # shape=(N, D)
+
+    cache = (x_hat, x_centered, inv_sqrt_variance_eps, gamma)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -416,7 +423,14 @@ def layernorm_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x_hat, x_centered, inv_sqrt_variance_eps, gamma = cache
+    D = dout.shape[1]
+    dx_hat = gamma * dout  # gamma.shape=(D,) dx_hat.shape=(N, D)
+    dvariance = -0.5 * inv_sqrt_variance_eps ** 3 * np.sum(dx_hat.T * x_centered, axis=0)  # shape=(N,)
+    dmean = -inv_sqrt_variance_eps * np.sum(dx_hat.T, axis=0) - dvariance * 2 * np.mean(x_centered, axis=0)  # shape=(N,)
+    dx = (inv_sqrt_variance_eps * dx_hat.T + dvariance * 2 * x_centered / D + dmean / D).T  # shape=(N, D)
+    dgamma = np.sum(dout * x_hat, axis=0)
+    dbeta = np.sum(dout, axis=0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
