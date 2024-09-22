@@ -1,6 +1,4 @@
-from __future__ import print_function
 
-from builtins import range
 from six.moves import cPickle as pickle
 import numpy as np
 import os
@@ -45,7 +43,7 @@ def load_CIFAR10(ROOT):
 
 
 def get_CIFAR10_data(
-    num_training=49000, num_validation=1000, num_test=1000, subtract_mean=True
+    num_training=49000, num_validation=1000, num_test=1000, subtract_mean=True, divide_std=True
 ):
     """
     Load the CIFAR-10 dataset from disk and perform preprocessing to prepare
@@ -75,6 +73,12 @@ def get_CIFAR10_data(
         X_train -= mean_image
         X_val -= mean_image
         X_test -= mean_image
+
+    if divide_std:
+        std_image = np.std(X_train, axis=0)
+        X_train /= std_image
+        X_val /= std_image
+        X_test /= std_image
 
     # Transpose so that channels come first
     X_train = X_train.transpose(0, 3, 1, 2).copy()

@@ -25,7 +25,8 @@ def affine_forward(x, w, b):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N = x.shape[0]
+    out = x.reshape(N, -1) @ w + b  # shape=(N, M)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -57,7 +58,10 @@ def affine_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N = x.shape[0]
+    dx = (dout @ w.T).reshape(x.shape)
+    dw = x.reshape(N, -1).T @ dout
+    db = np.sum(dout, axis=0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -82,7 +86,7 @@ def relu_forward(x):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    out = np.maximum(x, 0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -108,7 +112,7 @@ def relu_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    dx = np.where(x > 0, dout, 0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -137,7 +141,16 @@ def softmax_loss(x, y):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, _ = x.shape
+    logits_exp = np.exp(x)  # shape=(N, C)
+    sumexp = np.sum(logits_exp, axis=1)  # shape=(N,)
+    logsumexp = np.log(sumexp)  # shape=(N,)
+    loss = -np.sum(x[np.arange(N), y] - logsumexp)  # negative prob of the correct class
+    loss /= N
+
+    dx = logits_exp / sumexp.reshape(N, 1)  # shape=(N, C)
+    dx[np.arange(N), y] -= 1
+    dx /= N
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -216,7 +229,17 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        mean = np.mean(x, axis=0)     # shape=(D,)
+        x_centered = x - mean
+        variance = np.var(x_centered, axis=0)  # shape=(D,)
+        inv_sqrt_variance_eps = 1 / np.sqrt(variance + eps)
+        x_hat = x_centered * inv_sqrt_variance_eps  # shape=(N, D)
+        out = gamma * x_hat + beta
+
+        running_mean = momentum * running_mean + (1 - momentum) * mean
+        running_var = momentum * running_var + (1 - momentum) * variance
+
+        cache = (x_hat, x_centered, inv_sqrt_variance_eps, gamma)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -231,7 +254,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        out = gamma * (x - running_mean) / np.sqrt(running_var + eps)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -272,7 +295,14 @@ def batchnorm_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x_hat, x_centered, inv_sqrt_variance_eps, gamma = cache
+    N = dout.shape[0]
+    dx_hat = gamma * dout  # gamma.shape=(D,) dx_hat.shape=(N, D)
+    dvariance = -0.5 * inv_sqrt_variance_eps ** 3 * np.sum(dx_hat * x_centered, axis=0)
+    dmean = -inv_sqrt_variance_eps * np.sum(dx_hat, axis=0) - dvariance * 2 * np.mean(x_centered, axis=0)
+    dx = inv_sqrt_variance_eps * dx_hat + dvariance * 2 * x_centered / N + dmean / N
+    dgamma = np.sum(dout * x_hat, axis=0)
+    dbeta = np.sum(dout, axis=0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -306,7 +336,8 @@ def batchnorm_backward_alt(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    # skip this exercise
+    dx, dgamma, dbeta = batchnorm_backward(dout, cache)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
