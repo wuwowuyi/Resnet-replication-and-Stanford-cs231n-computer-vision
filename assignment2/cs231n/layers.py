@@ -564,7 +564,19 @@ def conv_forward_naive(x, w, b, conv_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    stride, pad = conv_param['stride'], conv_param['pad']
+    N, _, H, W = x.shape
+    F, _, HH, WW = w.shape
+    H_p, W_p = 1 + int((H + 2 * pad - HH) / stride), 1 + int((W + 2 * pad - WW) / stride)
+    out = np.zeros((N, F, H_p, W_p))
+
+    x_pad = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)))
+    for i in range(0, H_p):
+        h_field = slice(i * stride, i * stride + HH)
+        for j in range(0, W_p):
+            w_field = slice(j * stride, j * stride + WW)
+            x_slice = np.expand_dims(x_pad[:, :, h_field, w_field], 1)  # shape=(N, 1, C, HH, WW)
+            out[:, :, i, j] = np.sum(x_slice * w, axis=(2, 3, 4)) + b
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -592,7 +604,25 @@ def conv_backward_naive(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x, w, _, conv_param = cache
+    stride, pad = conv_param['stride'], conv_param['pad']
+    F, _, HH, WW = w.shape
+    _, _, H_p, W_p = dout.shape
+
+    dx, dw, db = np.zeros(x.shape), np.zeros(w.shape), np.zeros(F)
+    x_pad = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)))
+    dx_pad = np.pad(dx, ((0, 0), (0, 0), (pad, pad), (pad, pad)))
+    w_t = np.transpose(w)
+    for i in range(0, H_p):
+        h_field = slice(i * stride, i * stride + HH)
+        for j in range(0, W_p):
+            w_field = slice(j * stride, j * stride + WW)
+            dout_slice = dout[:, :, i, j]  # shape=(N, F)
+            dx_pad[:, :, h_field, w_field] += (w_t @ dout_slice.transpose()).transpose()
+            dw += ((x_pad[:, :, h_field, w_field]).transpose() @ dout_slice).transpose()
+            db += np.sum(dout_slice, axis=0)
+
+    dx = dx_pad[:, :, pad:-pad, pad:-pad]  # remove gradients for paddings
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
