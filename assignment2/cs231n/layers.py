@@ -827,7 +827,17 @@ def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, C, H, W = x.shape
+    NN, DD = N * G, C//G * H * W
+    x_p = x.reshape(N, G, C//G, H, W).reshape(NN, DD).transpose()  # shape=(DD, NN)
+    mean = np.mean(x_p, axis=0)  # shape=(NN,)
+    x_centered = x_p - mean  # shape=(DD, NN)
+    variance = np.var(x_centered, axis=0)  # shape=(NN,)
+    inv_sqrt_variance_eps = 1 / np.sqrt(variance + eps)  # shape=(NN,)
+    x_hat = (x_centered * inv_sqrt_variance_eps).transpose().reshape(N, G, C//G, H, W).reshape(N, C, H, W)
+    out = gamma * x_hat + beta  # shape=(N, C, H, W)
+
+    cache = (x_hat, x_centered, inv_sqrt_variance_eps, gamma, G)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -856,7 +866,17 @@ def spatial_groupnorm_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x_hat, x_centered, inv_sqrt_variance_eps, gamma, G = cache
+    N, C, H, W = dout.shape
+    NN, DD = N * G, C // G * H * W
+    dx_hat = (gamma * dout).reshape(N, G, C//G, H, W).reshape(NN, DD)  # gamma.shape=(1, C, 1, 1)
+    dvariance = -0.5 * inv_sqrt_variance_eps ** 3 * np.sum(dx_hat.T * x_centered, axis=0)  # shape=(NN,)
+    dmean = -inv_sqrt_variance_eps * np.sum(dx_hat.T, axis=0) - dvariance * 2 * np.mean(x_centered,
+                                                                                        axis=0)  # shape=(NN,)
+    dx = ((inv_sqrt_variance_eps * dx_hat.T + dvariance * 2 * x_centered / DD + dmean / DD)
+          .transpose().reshape(N, G, C//G, H, W).reshape(N, C, H, W))
+    dgamma = np.sum(dout * x_hat, axis=(0, 2, 3), keepdims=True)  # x_hat.shape=(N, C, H, W)
+    dbeta = np.sum(dout, axis=(0, 2, 3), keepdims=True)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
