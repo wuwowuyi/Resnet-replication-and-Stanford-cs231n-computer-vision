@@ -657,7 +657,16 @@ def max_pool_forward_naive(x, pool_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    pool_height, pool_width, stride = pool_param['pool_height'], pool_param['pool_width'], pool_param['stride']
+    N, C, H, W = x.shape
+    H_p, W_p = 1 + int((H - pool_height) / stride), 1 + int((W - pool_width) / stride)
+    out = np.zeros((N, C, H_p, W_p))
+
+    for i in range(H_p):
+        h_field = slice(i * stride, i * stride + pool_height)
+        for j in range(W_p):
+            w_field = slice(j * stride, j * stride + pool_width)
+            out[:, :, i, j] = np.max(x[:, :, h_field, w_field], axis=(2, 3))
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -683,7 +692,23 @@ def max_pool_backward_naive(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x, pool_param = cache
+    pool_height, pool_width, stride = pool_param['pool_height'], pool_param['pool_width'], pool_param['stride']
+    N, C, H, W = x.shape
+    _, _, H_p, W_p = dout.shape
+    dx = np.zeros(x.shape)
+
+    for i in range(H_p):
+        h_field = slice(i * stride, i * stride + pool_height)
+        for j in range(W_p):
+            w_field = slice(j * stride, j * stride + pool_width)
+            indices = np.argmax((x[:, :, h_field, w_field]).reshape(N, C, -1), axis=-1, keepdims=True)
+            # the following line does not work. Probably because values are copied into a view object
+            # np.put_along_axis(dx[:, :, h_field, w_field].reshape(N, C, -1), indices, dout[:, :, i, j][..., None], axis=-1)
+            values = np.zeros((N, C, pool_height * pool_width))
+            np.put_along_axis(values, indices, dout[:, :, i, j][..., None], axis=-1)
+            dx[:, :, h_field, w_field] = values.reshape(N, C, pool_height, pool_width)
+
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
