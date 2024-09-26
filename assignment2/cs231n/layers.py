@@ -142,10 +142,11 @@ def softmax_loss(x, y):
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
     N, _ = x.shape
-    logits_exp = np.exp(x)  # shape=(N, C)
+    x_hat = x - np.max(x, axis=1, keepdims=True)  # numerical stability. we don't need this if input is normalized
+    logits_exp = np.exp(x_hat)  # shape=(N, C)
     sumexp = np.sum(logits_exp, axis=1)  # shape=(N,)
     logsumexp = np.log(sumexp)  # shape=(N,)
-    loss = -np.sum(x[np.arange(N), y] - logsumexp)  # negative prob of the correct class
+    loss = -np.sum(x_hat[np.arange(N), y] - logsumexp)  # negative prob of the correct class
     loss /= N
 
     dx = logits_exp / sumexp.reshape(N, 1)  # shape=(N, C)
