@@ -1,7 +1,7 @@
 import torch
 from torch.nn import functional as F
 
-from resnet.resnet import ResNet
+from resnet.resnet_model import ResNet
 
 USE_GPU = True
 data_type = torch.float32
