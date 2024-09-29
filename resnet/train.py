@@ -39,21 +39,6 @@ def get_data(num_train: int) -> list[np.ndarray | torch.Tensor]:
     return data.values()
 
 
-def configure_optimizers(weight_decay: float, learning_rate: float) -> optim.Optimizer:
-    """
-    Adapted from nanoGPT https://github.com/karpathy/nanoGPT
-    """
-    params = [p for p in model.parameters() if p.requires_grad]
-    decay_params = [p for p in params if p.dim() >= 2]
-    nodecay_params = [p for p in params if p.dim() < 2]
-    optim_groups = [
-        {'params': decay_params, 'weight_decay': weight_decay},
-        {'params': nodecay_params, 'weight_decay': 0.0}
-    ]
-    optimizer = optim.AdamW(optim_groups, lr=learning_rate)
-    return optimizer
-
-
 @torch.no_grad()
 def check_accuracy(model, X, y, num_samples=1000, batch_size=100):
     """
@@ -95,7 +80,7 @@ def train(config: dict, args: argparse.Namespace):
     num_train, batch_size = config['num_train'], config['batch_size']
     X_train, y_train, X_val, y_val, X_test, y_test = get_data(num_train)
 
-    optimizer = configure_optimizers(config['weight_decay'], config['learning_rate'])
+    optimizer = optim.SGD(model.parameters(), config['learning_rate'], momentum=config['momentum'], weight_decay=config['weight_decay'])
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=config['decay_steps'], gamma=0.1)
     model.train()
 

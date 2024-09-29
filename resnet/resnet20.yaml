@@ -10,6 +10,7 @@ decay_steps:
   - 32000
   - 48000
 
+momentum: 0.9
 
 total_steps: 64000
 
