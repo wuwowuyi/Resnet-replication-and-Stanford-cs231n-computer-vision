@@ -9,6 +9,7 @@ import wandb
 import yaml
 from torch import optim
 from torch.nn import functional as F
+from torchvision.transforms import v2 as T
 
 from assignment2.cs231n.data_utils import get_CIFAR10_data
 from resnet.resnet_model import ResNet
@@ -34,9 +35,21 @@ def get_data(num_train: int) -> list[np.ndarray | torch.Tensor]:
         # CIFAR-10 is small, load the entire train and val dataset onto device
         if k.startswith('X'):
             data[k] = torch.as_tensor(v, dtype=data_type, device=device)
+            if k == 'X_train':
+                X_train_augmented = augment(data[k])
         else:
             data[k] = torch.as_tensor(v, dtype=torch.int64, device=device)
+    data['X_train_aug'] = X_train_augmented
     return data.values()
+
+
+def augment(x: torch.Tensor) -> torch.Tensor:
+    transforms = T.Compose([
+        T.Pad(4),
+        T.RandomHorizontalFlip(p=0.5),
+        T.RandomCrop(size=(32, 32)),
+    ])
+    return transforms(x)
 
 
 @torch.no_grad()
@@ -78,7 +91,7 @@ def train(config: dict, args: argparse.Namespace):
     np.random.seed(seed)
 
     num_train, batch_size = config['num_train'], config['batch_size']
-    X_train, y_train, X_val, y_val, X_test, y_test = get_data(num_train)
+    X_train, y_train, X_val, y_val, X_test, y_test, X_train_augmented = get_data(num_train)
 
     optimizer = optim.SGD(model.parameters(), config['learning_rate'], momentum=config['momentum'], weight_decay=config['weight_decay'])
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=config['decay_steps'], gamma=0.1)
@@ -90,7 +103,7 @@ def train(config: dict, args: argparse.Namespace):
 
     for t in range(config['total_steps']):
         indices = torch.randint(0, num_train, size=(batch_size,), device=device)
-        X, y = X_train[indices], y_train[indices]
+        X, y = X_train_augmented[indices], y_train[indices]
 
         scores = model(X)
         loss = F.cross_entropy(scores, y)
