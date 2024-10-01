@@ -73,7 +73,8 @@ def rnn_step_forward(x, prev_h, Wx, Wh, b):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    next_h =  np.tanh(x @ Wx + prev_h @ Wh + b)
+    cache = (x, Wx, prev_h, Wh, b)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -105,7 +106,14 @@ def rnn_step_backward(dnext_h, cache):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x, Wx, prev_h, Wh, b = cache
+    next_h = np.tanh(x @ Wx + prev_h @ Wh + b)
+    dsum = (1 - next_h ** 2) * dnext_h  # shape=(N, H)
+    dx = dsum @ Wx.T  # shape=(N, D)
+    dprev_h = dsum @ Wh.T
+    dWx = x.T @ dsum
+    dWh = prev_h.T @ dsum
+    db = np.sum(dsum, axis=0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -140,7 +148,16 @@ def rnn_forward(x, h0, Wx, Wh, b):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    T = x.shape[1]
+    prev_h = h0
+    hs = []
+    cache = []
+    for i in range(T):
+        h_t, cache_t = rnn_step_forward(x[:, i, :], prev_h, Wx, Wh, b)  # shape=(N, H)
+        hs.append(h_t)
+        cache.append(cache_t)
+        prev_h = h_t
+    h = np.stack(hs, axis=1)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -175,7 +192,17 @@ def rnn_backward(dh, cache):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, T, H = dh.shape
+    _, D = cache[0][0].shape   # cache[0][0] is x[:, 0, :] whose shape is (N, D)
+    dx, dWx, dWh, db = np.zeros((N, T, D)), np.zeros((D, H)), np.zeros((H, H)), np.zeros(H)
+    dprev_h = np.zeros((N, H))
+    for i in reversed(range(T)):
+        dx_t, dprev_h, dWx_t, dWh_t, db_t = rnn_step_backward(dh[:, i, :] + dprev_h, cache[i])
+        dx[:, i, :] = dx_t
+        dWx += dWx_t
+        dWh += dWh_t
+        db += db_t
+    dh0 = dprev_h
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
