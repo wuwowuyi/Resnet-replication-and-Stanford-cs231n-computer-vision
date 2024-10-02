@@ -284,7 +284,12 @@ def word_embedding_backward(dout, cache):
 
 
 def sigmoid(x):
-    """A numerically stable version of the logistic sigmoid function."""
+    """A numerically stable version of the logistic sigmoid function.
+
+    This is an element-wise operation.
+    For elements > 0, sigmoid(x) = 1 / (1 + e^(-x)
+    For elements < 0, sigmoid(x) = e^x / (1 + e^x)
+    """
     pos_mask = x >= 0
     neg_mask = x < 0
     z = np.zeros_like(x)
@@ -323,7 +328,14 @@ def lstm_step_forward(x, prev_h, prev_c, Wx, Wh, b):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    a = x @ Wx + prev_h @ Wh + b  # shape=(N, 4H)
+    # input gate i, forget gate f, output gate o, block gate g
+    ai, af, ao, ag = np.split(a, 4, axis=1)  # each shape=(N, H)
+    sigmoid_ai, sigmoid_af, sigmoid_ao, tanh_ag = sigmoid(ai), sigmoid(af), sigmoid(ao), np.tanh(ag)
+    next_c = sigmoid_af * prev_c + sigmoid_ai * tanh_ag
+    tanh_next_c = np.tanh(next_c)
+    next_h = sigmoid_ao * tanh_next_c
+    cache = (sigmoid_ai, sigmoid_af, sigmoid_ao, tanh_ag, tanh_next_c, prev_c, prev_h, x, Wx, Wh)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -358,7 +370,20 @@ def lstm_step_backward(dnext_h, dnext_c, cache):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    sigmoid_ai, sigmoid_af, sigmoid_ao, tanh_ag, tanh_next_c, prev_c, prev_h, x, Wx, Wh = cache
+
+    dao = sigmoid_ao * (1 - sigmoid_ao) * tanh_next_c * dnext_h
+    dnext_c_total = sigmoid_ao * (1 - tanh_next_c ** 2) * dnext_h + dnext_c
+    daf = sigmoid_af * (1 - sigmoid_af) * prev_c * dnext_c_total
+    dprev_c = sigmoid_af * dnext_c_total
+    dai = sigmoid_ai * (1 - sigmoid_ai) * tanh_ag * dnext_c_total
+    dag = sigmoid_ai * (1 - tanh_ag ** 2) * dnext_c_total
+    da = np.concatenate((dai, daf, dao, dag), axis=1)  # shape=(N, 4H)
+    dx = da @ Wx.T
+    dWx = x.T @ da
+    dprev_h = da @ Wh.T
+    dWh = prev_h.T @ da
+    db = np.sum(da, axis=0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
