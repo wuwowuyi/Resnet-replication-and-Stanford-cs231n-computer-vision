@@ -379,11 +379,11 @@ def lstm_step_backward(dnext_h, dnext_c, cache):
     dai = sigmoid_ai * (1 - sigmoid_ai) * tanh_ag * dnext_c_total
     dag = sigmoid_ai * (1 - tanh_ag ** 2) * dnext_c_total
     da = np.concatenate((dai, daf, dao, dag), axis=1)  # shape=(N, 4H)
-    dx = da @ Wx.T
-    dWx = x.T @ da
-    dprev_h = da @ Wh.T
-    dWh = prev_h.T @ da
-    db = np.sum(da, axis=0)
+    dx = da @ Wx.T          # shape=(N, D)
+    dWx = x.T @ da          # shape=(D, 4H)
+    dprev_h = da @ Wh.T     # shape=(N, H)
+    dWh = prev_h.T @ da     # shape=(H, 4H)
+    db = np.sum(da, axis=0) # shape=(4H,)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -422,7 +422,15 @@ def lstm_forward(x, h0, Wx, Wh, b):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    T = x.shape[1]
+    prev_h, prev_c = h0, np.zeros_like(h0)
+    hs, cache = [], []
+    for i in range(T):
+        next_h, next_c, cache_t = lstm_step_forward(x[:, i, :], prev_h, prev_c, Wx, Wh, b)
+        hs.append(next_h)
+        cache.append(cache_t)
+        prev_h, prev_c = next_h, next_c
+    h = np.stack(hs, axis=1)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -453,7 +461,19 @@ def lstm_backward(dh, cache):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, T, H = dh.shape
+    _, D = cache[0][-3].shape  # cache[0][-3] is x[:, 0, :]
+    dprev_h, dprev_c = np.zeros((N, H)), np.zeros((N, H))
+    dxs, dWx, dWh, db = [], np.zeros((D, 4 * H)), np.zeros((H, 4 * H)), np.zeros(4 * H)
+    for i in reversed(range(T)):
+        dx_t, dprev_h, dprev_c, dWx_t, dWh_t, db_t = lstm_step_backward(dh[:, i, :] + dprev_h, dprev_c, cache[i])
+        dxs.append(dx_t)
+        dWx += dWx_t
+        dWh += dWh_t
+        db += db_t
+    dxs.reverse()
+    dx = np.stack(dxs, axis=1)
+    dh0 = dprev_h
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
