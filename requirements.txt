@@ -4,3 +4,7 @@ notebook
 matplotlib
 imageio
 Cython
+wandb
+h5py
+torch
+torchvision
