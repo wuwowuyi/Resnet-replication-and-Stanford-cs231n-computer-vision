@@ -165,7 +165,20 @@ class MultiHeadAttention(nn.Module):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        n_head, n_hs = self.n_head, self.head_dim
+        # note here source queries target, not vice versa.
+        # therefore the value has the same shape as target, and output has the same shape as source.
+        # somewhat confusing to me.
+        q, k, v = self.query(query), self.key(key), self.value(value)
+        q = q.reshape(N, S, n_head, n_hs).permute(0, 2, 1, 3)  # shape=(N, n_head, S, n_hs)
+        k = k.reshape(N, T, n_head, n_hs).permute(0, 2, 3, 1)  # shape=(N, n_head, n_hs, T)
+        weights = q @ k / math.sqrt(n_hs)  # raw weights. shape=(N, n_head, S, T)
+        if attn_mask is not None:
+            weights.masked_fill_(attn_mask == 0, -math.inf)  # 0 is wrong. use -inf since there are negatives.
+        weights = self.attn_drop(F.softmax(weights, dim=-1))
+        v = v.reshape(N, T, n_head, n_hs).permute(0, 2, 1, 3)  # shape=(N, n_head, T, n_hs)
+        output = weights @ v  # shape=(N, n_head, S, n_hs)
+        output = self.proj(output.permute(0, 2, 1, 3).reshape(N, S, E))
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
