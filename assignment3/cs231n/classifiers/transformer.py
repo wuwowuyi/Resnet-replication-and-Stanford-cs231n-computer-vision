@@ -90,7 +90,12 @@ class CaptioningTransformer(nn.Module):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        memory = self.visual_projection(features).unsqueeze(1)  # shape=(N, 1, wordvec_dim)
+        # suppose always N < max_len
+        target = self.positional_encoding(self.embedding(captions))  # shape=(N, T, wordvec_dim)
+        target_mask = torch.tril(torch.ones((T, T)))  # used for self_attention. so the size is (T, T)
+        output = self.transformer(target, memory, target_mask)  # shape=(N, T, wordvec_dim)
+        scores = self.output(output)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
