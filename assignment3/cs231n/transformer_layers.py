@@ -38,7 +38,12 @@ class PositionalEncoding(nn.Module):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        i = torch.arange(max_len).reshape(max_len, 1)
+        j = torch.arange(embed_dim)
+        j_even, j_odd = j[::2], j[1::2]
+        pe[:, :, 0::2] = torch.sin(i * 10000 ** (-j_even / embed_dim))
+        pe[:, :, 1::2] = torch.cos(i * 10000 ** (-(j_odd - 1)/embed_dim))
+
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -70,7 +75,8 @@ class PositionalEncoding(nn.Module):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        p = (self.pe[:, :S, :]).expand_as(x)
+        output = self.dropout(x + p)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -174,7 +180,7 @@ class MultiHeadAttention(nn.Module):
         k = k.reshape(N, T, n_head, n_hs).permute(0, 2, 3, 1)  # shape=(N, n_head, n_hs, T)
         weights = q @ k / math.sqrt(n_hs)  # raw weights. shape=(N, n_head, S, T)
         if attn_mask is not None:
-            weights.masked_fill_(attn_mask == 0, -math.inf)  # 0 is wrong. use -inf since there are negatives.
+            weights.masked_fill_(attn_mask == 0, -math.inf)  # 0 is wrong. use -inf since there are negative weights
         weights = self.attn_drop(F.softmax(weights, dim=-1))
         v = v.reshape(N, T, n_head, n_hs).permute(0, 2, 1, 3)  # shape=(N, n_head, T, n_hs)
         output = weights @ v  # shape=(N, n_head, S, n_hs)
