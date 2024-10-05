@@ -30,7 +30,7 @@ def sample_noise(batch_size, dim, seed=None):
 
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    return torch.rand((batch_size, dim)) * 2 - 1.0
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -51,7 +51,17 @@ def discriminator(seed=None):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    mnist_feature_dim = 28 * 28
+    hidden_size = 256
+    alpha = 0.01
+    model = nn.Sequential(
+        Flatten(),
+        nn.Linear(mnist_feature_dim, hidden_size),
+        nn.LeakyReLU(alpha),
+        nn.Linear(hidden_size, hidden_size),
+        nn.LeakyReLU(alpha),
+        nn.Linear(hidden_size, 1)
+    )
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -76,7 +86,16 @@ def generator(noise_dim=NOISE_DIM, seed=None):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    mnist_feature_dim = 28 * 28
+    hidden_size = 1024
+    model = nn.Sequential(
+        nn.Linear(noise_dim, hidden_size),
+        nn.ReLU(),
+        nn.Linear(hidden_size, hidden_size),
+        nn.ReLU(),
+        nn.Linear(hidden_size, mnist_feature_dim),
+        nn.Tanh()  # to clip the image to be in the range of (-1, 1)
+    )
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -112,7 +131,9 @@ def discriminator_loss(logits_real, logits_fake):
     loss = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N = logits_real.shape[0]
+    targets_real, targets_fake = torch.ones(N).type(dtype), torch.zeros(N).type(dtype)
+    loss = bce_loss(logits_real, targets_real) + bce_loss(logits_fake, targets_fake)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return loss
@@ -130,7 +151,9 @@ def generator_loss(logits_fake):
     loss = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N = logits_fake.shape[0]
+    targets = torch.ones(N).type(dtype)
+    loss = bce_loss(logits_fake, targets)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return loss
