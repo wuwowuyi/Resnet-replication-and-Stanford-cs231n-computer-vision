@@ -192,7 +192,7 @@ def ls_discriminator_loss(scores_real, scores_fake):
     loss = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    loss = (0.5 * ((scores_real - 1) ** 2 + scores_fake ** 2)).mean()
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return loss
@@ -210,7 +210,7 @@ def ls_generator_loss(scores_fake):
     loss = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    loss = (0.5 * (scores_fake - 1) ** 2).mean()
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return loss
@@ -228,7 +228,20 @@ def build_dc_classifier(batch_size):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    model = nn.Sequential(
+        nn.Conv2d(1, 32, kernel_size=5),  # out.shape=(N, 32, 24, 24). (28-5+0)/1 + 1 = 24
+        nn.LeakyReLU(),
+        nn.MaxPool2d(kernel_size=2, stride=2),  # out.shape=(N, 32, 12, 12)
+        nn.Conv2d(32, 64, kernel_size=5),  # out.shape=(N, 64, 8, 8). (12-5+0)/1 + 1 = 8
+        nn.LeakyReLU(),
+        nn.MaxPool2d(kernel_size=2, stride=2),  # out.shape(N, 64, 4, 4)
+        nn.Flatten(),
+        nn.Linear(64 * 4 * 4, 64 * 4 * 4),
+        nn.LeakyReLU(),
+        nn.Linear(64 * 4 * 4, 1)
+    )
+
+    return model
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -249,7 +262,23 @@ def build_dc_generator(noise_dim=NOISE_DIM):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    model = nn.Sequential(
+        nn.Linear(noise_dim, 1024),
+        nn.ReLU(),
+        nn.BatchNorm1d(1024),
+        nn.Linear(1024, 128 * 7 * 7),
+        nn.ReLU(),
+        nn.BatchNorm1d(128 * 7 * 7),
+        nn.Unflatten(-1, (128, 7, 7)),  # unflatten the last dimension. out.shape=(N, 128, 7, 7)
+        nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),  # out.shape=(N, 64, 14, 14)
+        nn.ReLU(),
+        nn.BatchNorm2d(64),
+        nn.ConvTranspose2d(64, 1, kernel_size=4, stride=2, padding=1),  # out.shape=(N, 1, 28, 28)
+        nn.Tanh(),
+        nn.Flatten()
+    )
+
+    return model
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
