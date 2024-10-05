@@ -171,8 +171,9 @@ def get_optimizer(model):
     """
     optimizer = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
+    learning_rate = 1e-3
+    beta1, beta2 = 0.5, 0.999
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate, betas=(beta1, beta2))
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return optimizer
@@ -275,24 +276,27 @@ def run_a_gan(D, G, D_solver, G_solver, discriminator_loss, generator_loss, load
     iter_count = 0
     for epoch in range(num_epochs):
         for x, _ in loader_train:
+            # drop the reminder that are less than one batch
             if len(x) != batch_size:
                 continue
-            D_solver.zero_grad()
-            real_data = x.type(dtype)
-            logits_real = D(2* (real_data - 0.5)).type(dtype)
 
-            g_fake_seed = sample_noise(batch_size, noise_size).type(dtype)
-            fake_images = G(g_fake_seed).detach()
+            # optimize discriminator
+            D_solver.zero_grad()
+            real_data = x.type(dtype)  # range in (0, 1)
+            logits_real = D(2 * (real_data - 0.5)).type(dtype)  # change to (-1, 1)
+
+            g_fake_seed = sample_noise(batch_size, noise_size).type(dtype)  # noise also in range(-1, 1)
+            fake_images = G(g_fake_seed).detach()  # update D, no gradients back into G.
             logits_fake = D(fake_images.view(batch_size, 1, 28, 28))
 
             d_total_error = discriminator_loss(logits_real, logits_fake)
             d_total_error.backward()
             D_solver.step()
 
+            # optimize generator
             G_solver.zero_grad()
             g_fake_seed = sample_noise(batch_size, noise_size).type(dtype)
             fake_images = G(g_fake_seed)
-
             gen_logits_fake = D(fake_images.view(batch_size, 1, 28, 28))
             g_error = generator_loss(gen_logits_fake)
             g_error.backward()
