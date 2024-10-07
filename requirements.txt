@@ -8,3 +8,5 @@ wandb
 h5py
 torch
 torchvision
+pandas
+tqdm
