@@ -152,12 +152,22 @@ class CaptioningRNN:
 
         h0 = features @ W_proj + b_proj  # shape=(N, H)
         x, x_cache = word_embedding_forward(captions_in, W_embed)  # x.shape=(N, T, D)
-        h, h_cache = rnn_forward(x, h0, Wx, Wh, b)  # h.shape=(N, T, H)
+
+        if self.cell_type == 'rnn':
+            h, h_cache = rnn_forward(x, h0, Wx, Wh, b)  # h.shape=(N, T, H)
+        else:  # 'lstm'
+            h, h_cache = lstm_forward(x, h0, Wx, Wh, b)  # h.shape=(N, T, H)
+
         out, out_cache = temporal_affine_forward(h, W_vocab, b_vocab)  # out.shape=(N, T, V)
 
         loss, dout = temporal_softmax_loss(out, captions_out, mask)
         dh, dW_vocab, db_vocab = temporal_affine_backward(dout, out_cache)
-        dx, dh0, dWx, dWh, db = rnn_backward(dh, h_cache)
+
+        if self.cell_type == 'rnn':
+            dx, dh0, dWx, dWh, db = rnn_backward(dh, h_cache)
+        else:  # 'lstm'
+            dx, dh0, dWx, dWh, db = lstm_backward(dh, h_cache)
+
         dW_embd = word_embedding_backward(dx, x_cache)
         dW_proj = features.T @ dh0
         db_proj = np.sum(dh0, axis=0)
@@ -238,17 +248,19 @@ class CaptioningRNN:
         x = np.tile(self._start, N)
         for i in range(max_length):
             embd, _ = word_embedding_forward(x.reshape(N, 1), W_embed)  # shape=(N, 1, wordvec_dim)
-            h, _ = rnn_forward(embd, prev_h, Wx, Wh, b)  # shape=(N, 1, hidden_size)
+
+            if self.cell_type == 'rnn':
+                h, _ = rnn_forward(embd, prev_h, Wx, Wh, b)  # shape=(N, 1, hidden_size)
+            else:
+                h, _ = lstm_forward(embd, prev_h, Wx, Wh, b)  # shape=(N, 1, hidden_size)
+
             out, _ = temporal_affine_forward(h, W_vocab, b_vocab)  # shape=(N, 1, vocab_size)
             prev_h = h.squeeze(1)
 
             #dist = distributions.Categorical(logits=torch.as_tensor(out.squeeze(1)))
             #x = dist.sample().numpy()
             x = np.argmax(out.squeeze(1), axis=1)
-
             captions[:, i] = x
-            if np.all(x == self._end).item():
-                break
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
