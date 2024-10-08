@@ -1,4 +1,6 @@
 import numpy as np
+import torch
+from torch import distributions
 
 from ..rnn_layers import *
 
@@ -232,7 +234,21 @@ class CaptioningRNN:
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        prev_h = features @ W_proj + b_proj  # shape=(N, H)
+        x = np.tile(self._start, N)
+        for i in range(max_length):
+            embd, _ = word_embedding_forward(x.reshape(N, 1), W_embed)  # shape=(N, 1, wordvec_dim)
+            h, _ = rnn_forward(embd, prev_h, Wx, Wh, b)  # shape=(N, 1, hidden_size)
+            out, _ = temporal_affine_forward(h, W_vocab, b_vocab)  # shape=(N, 1, vocab_size)
+            prev_h = h.squeeze(1)
+
+            #dist = distributions.Categorical(logits=torch.as_tensor(out.squeeze(1)))
+            #x = dist.sample().numpy()
+            x = np.argmax(out.squeeze(1), axis=1)
+
+            captions[:, i] = x
+            if np.all(x == self._end).item():
+                break
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
