@@ -148,7 +148,23 @@ class CaptioningRNN:
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        h0 = features @ W_proj + b_proj  # shape=(N, H)
+        x, x_cache = word_embedding_forward(captions_in, W_embed)  # x.shape=(N, T, D)
+        h, h_cache = rnn_forward(x, h0, Wx, Wh, b)  # h.shape=(N, T, H)
+        out, out_cache = temporal_affine_forward(h, W_vocab, b_vocab)  # out.shape=(N, T, V)
+
+        loss, dout = temporal_softmax_loss(out, captions_out, mask)
+        dh, dW_vocab, db_vocab = temporal_affine_backward(dout, out_cache)
+        dx, dh0, dWx, dWh, db = rnn_backward(dh, h_cache)
+        dW_embd = word_embedding_backward(dx, x_cache)
+        dW_proj = features.T @ dh0
+        db_proj = np.sum(dh0, axis=0)
+
+        grads["W_proj"], grads['b_proj'] = dW_proj, db_proj
+        grads['W_embed'] = dW_embd
+        grads['Wx'], grads['Wh'], grads['b'] = dWx, dWh, db
+        grads['W_vocab'], grads['b_vocab'] = dW_vocab, db_vocab
+
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
