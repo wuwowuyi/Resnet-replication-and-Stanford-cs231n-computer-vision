@@ -36,3 +36,15 @@ At test time (sampling), the first input is the `<START>` token, and tokens gene
 ### Self-supervised Learning
 
 
+## Resnet for CIFAR-10
+
+I implemented a Resnet model for CIFAR-10 by following the [original resnet paper](https://arxiv.org/abs/1512.03385). The implementation strictly follows section 4.2 of the paper. 
+
+Specifically, the input layer is a 3 x 3 convolutional layer with 16 filters. Then the model has a stack of 6n layers (n = 3 in this case). All conv layers are 3 x 3 convolutions on the feature map sizes {32, 16, 8} respectively, with 2n layers for each feature map size. The number of filters are {16, 32, 64} respectively. 
+The residual connection uses option A described in the paper, i.e. use stride=2 Max pooling, and pad zeros for increased dimensions.
+The last is a feedforward layer with 10 output classes.
+
+So in total there are 20 layers, with 269914 (0.27 MB) parameters.
+The validation and test accuracy on CIFAR-10 are between 91.5-92.0 %, consistent with the paper.
+
+It is pretty cool that such a small network has so good performance.
