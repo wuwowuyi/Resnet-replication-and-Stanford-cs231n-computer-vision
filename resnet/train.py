@@ -9,7 +9,9 @@ import wandb
 import yaml
 from torch import optim
 from torch.nn import functional as F
+from torch.utils.data import DataLoader, sampler
 from torchvision.transforms import v2 as T
+import torchvision.datasets as dset
 
 from assignment2.cs231n.data_utils import get_CIFAR10_data
 from resnet.resnet_model import ResNet
@@ -27,53 +29,45 @@ model = ResNet(3)  # 20 layers
 model.to(device=device, dtype=data_type)
 
 
-def get_data(num_train: int) -> list[np.ndarray | torch.Tensor]:
-    data = get_CIFAR10_data(num_train, 50000 - num_train, 10000, divide_std=False)
-    for k, v in data.items():
-        if 'test' in k:
-            continue
-        # CIFAR-10 is small, load the entire train and val dataset onto device
-        if k.startswith('X'):
-            data[k] = torch.as_tensor(v, dtype=data_type, device=device)
-            if k == 'X_train':
-                X_train_augmented = augment(data[k])
-        else:
-            data[k] = torch.as_tensor(v, dtype=torch.int64, device=device)
-    data['X_train_aug'] = X_train_augmented
-    return data.values()
-
-
-def augment(x: torch.Tensor) -> torch.Tensor:
-    transforms = T.Compose([
-        T.Pad(4),
+def get_dataloader(num_train, batch_size):
+    transforms_train = T.Compose([
+        T.ToTensor(),
         T.RandomHorizontalFlip(p=0.5),
-        T.RandomCrop(size=(32, 32)),
+        T.RandomCrop(size=(32, 32), padding=4),
+        T.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     ])
-    return transforms(x)
+
+    transform_val = T.Compose([
+        T.ToTensor(),
+        T.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+
+    cifar10_train = dset.CIFAR10('./data', train=True, download=True, transform=transforms_train)
+    loader_train = DataLoader(cifar10_train, batch_size=batch_size, sampler=sampler.SubsetRandomSampler(range(num_train)))
+    cifar10_val = dset.CIFAR10('./data', train=True, download=True, transform=transform_val)
+    loader_val = DataLoader(cifar10_val, batch_size=batch_size, sampler=sampler.SubsetRandomSampler(range(num_train, 50000)))
+    cifar10_test = dset.CIFAR10('./data', train=False, download=True, transform=transform_val)
+    loader_test = DataLoader(cifar10_test, batch_size=batch_size)
+    return loader_train, loader_val, loader_test
 
 
 @torch.no_grad()
-def check_accuracy(model, X, y, num_samples=1000, batch_size=100):
+def check_accuracy(resnet, data_loader, num_batches=None):
     """
     Adapted from assignment2.Solver.check_accuracy
     """
-    # Maybe subsample the data
-    N = X.shape[0]
-    if num_samples < N:
-        mask = torch.randint(N, size=(num_samples,), device=device)
-        X = X[mask]
-        y = y[mask]
-
-    # Compute predictions in batches
-    assert num_samples % batch_size == 0
-    y_pred = []
-    model.eval()
-    for start in range(0, num_samples, batch_size):
-        scores = model(X[start: start+batch_size])
-        y_pred.append(torch.max(scores, dim=1).indices)
-    y_pred = torch.cat(y_pred)
-    acc = torch.mean(y_pred == y, dtype=torch.float)
-    return acc
+    resnet.eval()
+    correct = 0
+    total = 0
+    for i, (x, y) in enumerate(data_loader):
+        x, y = x.to(device=device, dtype=data_type), y.to(device=device, dtype=torch.int64)
+        scores = resnet(x)
+        y_pred = torch.max(scores, dim=1).indices
+        correct += torch.sum(y == y_pred)
+        total += y.shape[0]
+        if num_batches is not None and i >= num_batches:
+            break
+    return correct / total
 
 
 def save_checkpoint(step: int, values: dict, ckpt_name=None) -> None:
@@ -91,7 +85,7 @@ def train(config: dict, args: argparse.Namespace):
     np.random.seed(seed)
 
     num_train, batch_size = config['num_train'], config['batch_size']
-    X_train, y_train, X_val, y_val, X_test, y_test, X_train_augmented = get_data(num_train)
+    loader_train, loader_val, loader_test = get_dataloader(num_train, batch_size)
 
     optimizer = optim.SGD(model.parameters(), config['learning_rate'], momentum=config['momentum'], weight_decay=config['weight_decay'])
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=config['decay_steps'], gamma=0.1)
@@ -101,71 +95,73 @@ def train(config: dict, args: argparse.Namespace):
     best_model_dict = None
     ckpt_name = None
 
-    for t in range(config['total_steps']):
-        indices = torch.randint(0, num_train, size=(batch_size,), device=device)
-        X, y = X_train_augmented[indices], y_train[indices]
+    num_epoch = config['total_steps'] // (num_train // batch_size)
+    t = 0
 
-        scores = model(X)
-        loss = F.cross_entropy(scores, y)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+    for epoch in range(num_epoch):
+        for x, y in loader_train:
+            x, y = x.to(device=device, dtype=data_type), y.to(device=device, dtype=torch.int64)
 
-        # step optimizer
-        scheduler.step(t)
-        current_lr = scheduler.get_last_lr()[0]
+            scores = model(x)
+            loss = F.cross_entropy(scores, y)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-        first_it = t == 0
-        last_it = t == num_train - 1
-        if first_it or last_it or t % args.eval_interval == 0:
-            model.eval()
-            train_acc = check_accuracy(model, X_train, y_train)
-            val_acc = check_accuracy(model, X_val, y_val)
-            model.train()
+            # step optimizer
+            scheduler.step(t)
+            t += 1
+            current_lr = scheduler.get_last_lr()[0]
 
-            if args.wandb_log:
-                wandb.log({
-                    "step": t,
-                    "loss": loss,
-                    "train_acc": train_acc,
-                    "val_acc": val_acc,
-                    "lr": current_lr,
-                })
+            first_it = t == 1
+            if first_it or t % args.eval_interval == 0:
+                y_pred = torch.max(scores, dim=1).indices
+                train_acc = torch.sum(y == y_pred) / y.shape[0]
+                model.eval()
+                val_acc = check_accuracy(model, loader_val, 10)
+                model.train()
 
-            # save best model
-            if val_acc > best_val_acc:
-                best_val_acc = val_acc
-                best_model_dict = model.state_dict()
-                ckpt_name = 'resnet_best_model_ckpt'
+                if args.wandb_log:
+                    wandb.log({
+                        "step": t,
+                        "loss": loss,
+                        "train_acc": train_acc,
+                        "val_acc": val_acc,
+                        "lr": current_lr,
+                    })
 
-            if ckpt_name is not None or t % args.checkpoint_interval == 0:
-                values = {
-                    'step': t,
-                    'learning_rate': current_lr,
-                    'model_dict': model.state_dict()
-                }
-                save_checkpoint(t, values, ckpt_name)
-                ckpt_name = None
+                # save best model
+                if val_acc > best_val_acc:
+                    best_val_acc = val_acc
+                    best_model_dict = model.state_dict()
+                    ckpt_name = 'resnet_best_model_ckpt'
+
+                if ckpt_name is not None or t % args.checkpoint_interval == 0:
+                    values = {
+                        'step': t,
+                        'learning_rate': current_lr,
+                        'model_dict': model.state_dict()
+                    }
+                    save_checkpoint(t, values, ckpt_name)
+                    ckpt_name = None
 
     if best_model_dict:
         best_model = ResNet(3)
         best_model.load_state_dict(best_model_dict)
         best_model.to(device=device, dtype=data_type)
-        model.eval()
+        best_model.eval()
 
-        best_val_acc = check_accuracy(best_model, X_val, y_val, num_samples=50000-num_train, batch_size=250)
+        best_val_acc = check_accuracy(best_model, loader_val)
         print(f"Best validation accuracy is {best_val_acc:.4f}")
 
-        X_test = torch.as_tensor(X_test, device=device, dtype=data_type)
-        y_test = torch.as_tensor(y_test, device=device, dtype=torch.int64)
-        best_test_acc = check_accuracy(best_model, X_test, y_test, num_samples=len(X_test), batch_size=250)
+        best_test_acc = check_accuracy(best_model, loader_test)
         print(f"Best test accuracy is {best_test_acc:.4f}")
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_file", "-cfg", type=str, required=True)
-    parser.add_argument("--eval_interval", "-ei", type=int, default=1000)
+    parser.add_argument("--eval_interval", "-ei", type=int, default=100)
     parser.add_argument("--checkpoint_interval", type=int, default=16000)  # total_steps // 4
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--wandb_log", action="store_true")
