@@ -91,7 +91,7 @@ class CaptioningTransformer(nn.Module):
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
         memory = self.visual_projection(features).unsqueeze(1)  # shape=(N, 1, wordvec_dim)
-        # suppose always N < max_len
+        # suppose always T < max_len
         target = self.positional_encoding(self.embedding(captions))  # shape=(N, T, wordvec_dim)
         target_mask = torch.tril(torch.ones((T, T)))  # used for self_attention. so the size is (T, T)
         output = self.transformer(target, memory, target_mask)  # shape=(N, T, wordvec_dim)
@@ -126,17 +126,17 @@ class CaptioningTransformer(nn.Module):
             partial_caption = self._start * np.ones(N, dtype=np.int32)
             partial_caption = torch.LongTensor(partial_caption)
             # [N] -> [N, 1]
-            partial_caption = partial_caption.unsqueeze(1)
+            partial_caption = partial_caption.unsqueeze(1)  # shape=(N, 1)
 
             for t in range(max_length):
 
                 # Predict the next token (ignoring all other time steps).
-                output_logits = self.forward(features, partial_caption)
-                output_logits = output_logits[:, -1, :]
+                output_logits = self.forward(features, partial_caption)  # shape=(N, 1, vocab_size)
+                output_logits = output_logits[:, -1, :]  # shape=(N, vocab_size)
 
                 # Choose the most likely word ID from the vocabulary.
                 # [N, V] -> [N]
-                word = torch.argmax(output_logits, axis=1)
+                word = torch.argmax(output_logits, axis=1)  # shape=(N,)
 
                 # Update our overall caption and our current partial caption.
                 captions[:, t] = word.numpy()
