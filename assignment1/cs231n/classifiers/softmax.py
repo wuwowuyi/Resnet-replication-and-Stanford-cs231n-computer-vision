@@ -62,8 +62,8 @@ def softmax_loss_vectorized(W, X, y, reg):
     # normalize data by dividing train std first
     N, _ = X.shape
     logits = X @ W  # shape=(N, C)
-    #class_max = np.max(logits, axis=1, keepdims=True)  # shape=(N, 1)
-    #logits_exp = np.exp(logits - class_max)
+    class_max = np.max(logits, axis=1, keepdims=True)  # shape=(N, 1)
+    logits -= class_max
     logits_exp = np.exp(logits)  # shape=(N, C)
     sumexp = np.sum(logits_exp, axis=1)  # shape=(N,)
     logsumexp = np.log(sumexp)  # shape=(N,)
