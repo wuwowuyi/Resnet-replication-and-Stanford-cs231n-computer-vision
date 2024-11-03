@@ -1,4 +1,27 @@
 
+Stanford CS231n 2024 assignments. and replication of ResNet for CIFAR-10.
+
+## Assignment 1
+
+K nearest neighbour. distance matrix, using cross validation to find the best k.
+
+SVM classifier. CIFAR-10 image preprocessing. Linear SVM forward and backward functions. 
+
+Softmax forward and backward.
+
+Two layer MLP network.
+
+## Assignment 2
+
+Feed forward network. 
+
+Convolutional network.
+
+Batch normalization. Layer normalization. 
+
+Dropout.
+
+Pytorch exercises. 
 
 ## Assignment 3
 
