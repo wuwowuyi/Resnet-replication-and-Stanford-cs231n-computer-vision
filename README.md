@@ -54,9 +54,20 @@ At test time (sampling), the first input is the `<START>` token, and tokens gene
 
 ### GAN
 
+The objective function $\displaystyle \min_G \max_D E_{x \sim p_{data}}[logD(x)] + E_{z \sim p(z)}[log(1 - D(G(z)))]$ 
+works well with Discriminator D but has a problem in optimizing Generator G.
+At the start of training, $G(z)$ generates roughly random noise, therefore $D(G(z))$ is close to 0. This means  $-log(1 - D(G(z)))$ is close to 0 too, and the gradients propagated back to generator $G$ is very small.
+But if we use objective function  $\displaystyle \max_GE_{z \sim p(z)}[log(D(G(z)))]$, when $D(G(z))$ is close to 0, $-log(D(G(z)))$ is a big number, which generates strong gradients back to G.
 
+Least squares GAN found the vanilla GAN's sigmoid cross-entropy loss function may lead to the vanishing gradients problem during the learning process. The paper proposed to use least square loss function, and showed that it can stablize training and generate better images. The discriminator optimizer pushes $D(x)$ to 1 where $x \sim p_{data}$ and $D(G(z))$ to zero, whereas the generator optimizer wants to push $D(G(z))$ to 1.
 
 ### Self-supervised Learning
+
+Self-supervised learning allows a model to learn and generate a "good" representation vector for images. "Good" means images in the dataset representing **semantically** similar entities should have similar representation vectors, and different images should have different representation vectors. The learnt model performs well even on new datasets the model was not trained on.
+
+It looks to me the authors were trying to generate image representation via self-supervised training like what BERT did. They cleverly construct "labels" by random data augmentation.
+
+The loss function is also well-designed that cannot only push positive pairs closer but also push negative pairs apart.
 
 
 ## Resnet for CIFAR-10
