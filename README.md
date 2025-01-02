@@ -68,11 +68,13 @@ Self-supervised learning allows a model to learn and generate a "good" represent
 The authors cleverly constructed "labels" by random data augmentation. Specifically, given an image $x$, SimCLR uses <ins>two different data augmentation schemes</ins> $t$ and $t'$ to generate the <ins>positive pair of images</ins> $\tilde{x}_i$ and $\tilde{x}_j$. $f$ is a basic encoder net that extracts representation vectors $h_i$ and $h_j$ respectively from the augmented data samples. Finally, a small neural network projection head $g$ maps the representation vectors to the space where the contrastive loss is applied. The goal of the contrastive loss is to **maximize agreement between the final vectors** $z_i = g(h_i)$ and $z_j = g(h_j)$:
 
 $$
-l \; (i, j) = -\log \frac{\exp (\;\text{sim}(z_i, z_j)\; / \;\tau) }{\sum_{k=1}^{2N} \mathbb{1}_{k \neq i} \exp (\;\text{sim} (z_i, z_k) \;/ \;\tau) }
+l(i, j) = -\log \frac{\exp(\text{sim}(z_i, z_j) / \tau) }{\sum_{k=1}^{2N} \mathbb{1}_{k \neq i} \exp (\text{sim}(z_i, z_k)/ \tau) }
 $$
 
-where $\mathbb{1} \in \{0, 1\}$ is an indicator function that outputs $1$ if $k\neq i$ and $0$ otherwise. $\tau$ is a temperature hyperparameter that determines how fast the exponentials increase.   
-sim$(z_i, z_j) = \frac{z_i \cdot z_j}{|| z_i || || z_j ||}$ is the (normalized) dot product between vectors $z_i$ and $z_j$.  
+where $\mathbb{1} \in \\{0, 1\\}$ is an indicator function that outputs 1 if $k\neq i$ and 0 otherwise. $\tau$ is a temperature hyperparameter that determines how fast the exponentials increase.   
+$sim(z_i, z_j) = \frac{z_i \cdot z_j}{||z_i||||z_j||}$ 
+
+is the (normalized) dot product between vectors $z_i$ and $z_j$.  
   
 The loss function is designed that it can not only push positive pairs closer but also push negative pairs apart.
 
