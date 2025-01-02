@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from torch.nn import functional as F
 
 
 def sim(z_i, z_j):
@@ -202,6 +203,23 @@ def simclr_loss_vectorized(out_left, out_right, tau, device='cuda'):
     #                               END OF YOUR CODE                             #
     ##############################################################################
     
+    return loss
+
+
+def simclr_loss(out_left, out_right, tau, device='cuda'):
+    """Compute the contrastive loss L over a batch.
+
+    Simpler than assignment provided.
+    """
+    N, _ = out_left.shape
+    out = torch.cat((out_left, out_right))  # shape=(2N, D)
+    norm = torch.linalg.norm(out, dim=1, keepdim=True)  # shape=(2N, 1)
+    product = out @ out.T / (norm @ norm.T * tau)  # shape=(2N , 2N)
+    mask = (torch.ones(2 * N, 2 * N) - torch.eye(2 * N)).to(device=device, dtype=torch.bool)
+    product = torch.masked_select(product, mask).reshape(2 * N, 2 * N - 1)  # shape=(2N, 2N-1)
+
+    target = torch.cat((torch.arange(N - 1, 2 * N - 1), torch.arange(N))).to(device=device, dtype=torch.int64)
+    loss = F.cross_entropy(product, target)
     return loss
 
 
