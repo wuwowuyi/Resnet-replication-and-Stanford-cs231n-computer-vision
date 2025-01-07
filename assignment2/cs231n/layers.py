@@ -572,12 +572,14 @@ def conv_forward_naive(x, w, b, conv_param):
     out = np.zeros((N, F, H_p, W_p))
 
     x_pad = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)))
+    w_t = w.reshape(F, -1).T
     for i in range(0, H_p):
         h_field = slice(i * stride, i * stride + HH)
         for j in range(0, W_p):
             w_field = slice(j * stride, j * stride + WW)
-            x_slice = np.expand_dims(x_pad[:, :, h_field, w_field], 1)  # shape=(N, 1, C, HH, WW)
-            out[:, :, i, j] = np.sum(x_slice * w, axis=(2, 3, 4)) + b
+            # note there is no np.view function.
+            x_slice = x_pad[:, :, h_field, w_field].reshape(N, -1)  # shape=(N, C * HH ** WW)
+            out[:, :, i, j] = x_slice @ w_t + b
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -607,21 +609,21 @@ def conv_backward_naive(dout, cache):
 
     x, w, _, conv_param = cache
     stride, pad = conv_param['stride'], conv_param['pad']
-    F, _, HH, WW = w.shape
-    _, _, H_p, W_p = dout.shape
+    F, C, HH, WW = w.shape
+    N, _, H_p, W_p = dout.shape
 
-    dx, dw, db = np.zeros(x.shape), np.zeros(w.shape), np.zeros(F)
+    dx, dw = np.zeros(x.shape), np.zeros(w.shape)  # x.shape=(N, C, H, W)
     x_pad = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)))
     dx_pad = np.pad(dx, ((0, 0), (0, 0), (pad, pad), (pad, pad)))
-    w_t = np.transpose(w)
+    w_f = w.reshape(F, -1)  # shape=(F, C * HH * WW)
     for i in range(0, H_p):
         h_field = slice(i * stride, i * stride + HH)
         for j in range(0, W_p):
             w_field = slice(j * stride, j * stride + WW)
             dout_slice = dout[:, :, i, j]  # shape=(N, F)
-            dx_pad[:, :, h_field, w_field] += (w_t @ dout_slice.transpose()).transpose()
-            dw += ((x_pad[:, :, h_field, w_field]).transpose() @ dout_slice).transpose()
-            db += np.sum(dout_slice, axis=0)
+            dx_pad[:, :, h_field, w_field] += (dout_slice @ w_f).reshape(N, C, HH, WW)
+            dw += (dout_slice.T @ x_pad[:, :, h_field, w_field].reshape(N, -1)).reshape(F, C, HH, WW)
+    db = np.sum(dout, axis=(0, 2, 3))
 
     dx = dx_pad[:, :, pad:-pad, pad:-pad]  # remove gradients for paddings
 
