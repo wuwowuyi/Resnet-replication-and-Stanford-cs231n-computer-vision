@@ -245,21 +245,21 @@ class CaptioningRNN:
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
         prev_h = features @ W_proj + b_proj  # shape=(N, H)
+        prev_c = np.zeros_like(prev_h)
         x = np.tile(self._start, N)
         for i in range(max_length):
-            embd, _ = word_embedding_forward(x.reshape(N, 1), W_embed)  # shape=(N, 1, wordvec_dim)
+            embd, _ = word_embedding_forward(x, W_embed)  # shape=(N, wordvec_dim)
 
             if self.cell_type == 'rnn':
-                h, _ = rnn_forward(embd, prev_h, Wx, Wh, b)  # shape=(N, 1, hidden_size)
+                h, _ = rnn_step_forward(embd, prev_h, Wx, Wh, b)  # shape=(N, hidden_size)
             else:
-                h, _ = lstm_forward(embd, prev_h, Wx, Wh, b)  # shape=(N, 1, hidden_size)
+                h, prev_c, _ = lstm_step_forward(embd, prev_h, prev_c, Wx, Wh, b)  # shape=(N, hidden_size)
+            prev_h = h
 
-            out, _ = temporal_affine_forward(h, W_vocab, b_vocab)  # shape=(N, 1, vocab_size)
-            prev_h = h.squeeze(1)
-
+            out, _ = temporal_affine_forward(np.expand_dims(h, 1), W_vocab, b_vocab)  # shape=(N, 1, vocab_size)
             #dist = distributions.Categorical(logits=torch.as_tensor(out.squeeze(1)))
             #x = dist.sample().numpy()
-            x = np.argmax(out.squeeze(1), axis=1)
+            x = np.argmax(out.squeeze(1), axis=1)  # shape=(N,)
             captions[:, i] = x
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
