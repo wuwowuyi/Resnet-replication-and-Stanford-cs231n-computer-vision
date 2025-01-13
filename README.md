@@ -13,7 +13,7 @@ Two layer MLP network.
 
 ## Assignment 2
 
-Feed forward network. 
+Feed forward network. Optimization methods: SGD, SGD + momentum, RMSProp, ADAM.
 
 Convolutional network.
 
@@ -39,8 +39,9 @@ Word to integer index and integer index to word mappings are stored in a JSON fi
 
 Vanilla RNN and LSTM are implemented using purely Numpy.
 
-The experiments overfit 50 training data points from COCO. Somehow in this setup, the LSTM's performance is not as good as RNN.
+The image representation extracted from VGG and after a linear projection, is used as initial hidden state $h_0$ for RNN/LSTM.
 
+The experiments overfit 50 training data points from COCO. 
 
 #### Transformer Captioning
 
@@ -65,6 +66,8 @@ Least squares GAN found the vanilla GAN's sigmoid cross-entropy loss function ma
 
 Self-supervised learning allows a model to learn and generate a "good" representation for images without labels. "Good" means images in the dataset representing **semantically** similar entities should have similar representations, and different images should have different representations.
 
+<img src="https://production-media.paperswithcode.com/methods/Screen_Shot_2020-07-02_at_4.31.34_PM_7zlWDQE.png" width="500">
+
 The authors cleverly constructed "labels" by random data augmentation. Specifically, given an image $x$, SimCLR uses <ins>two different data augmentation schemes</ins> $t$ and $t'$ to generate the <ins>positive pair of images</ins> $\tilde{x}_i$ and $\tilde{x}_j$. $f$ is a basic encoder net that extracts representation vectors $h_i$ and $h_j$ respectively from the augmented data samples. Finally, a small neural network projection head $g$ maps the representation vectors to the space where the contrastive loss is applied. The goal of the contrastive loss is to **maximize agreement between the final vectors** $z_i = g(h_i)$ and $z_j = g(h_j)$:
 
 $$
@@ -77,6 +80,58 @@ $sim(z_i, z_j) = \frac{z_i \cdot z_j}{||z_i||||z_j||}$
 is the (normalized) dot product between vectors $z_i$ and $z_j$.  
   
 The loss function is designed that it can not only push positive pairs closer but also push negative pairs apart.
+
+## Assignments from other years
+
+### style transfer
+
+**Idea**: generate an image that reflects the content of one image and the style of another by incorporating both in our loss function. We can then use this hybrid loss function to perform gradient descent **not on the parameters** of the model, **but instead on the pixel values** of our original image.
+
+#### Loss
+The loss function is a weighted sum of three terms: content loss + style loss + total variation loss.
+
+##### content loss
+The content loss is given by, for a given layer $\ell$:
+$L_c = w_c \times \sum_{i,j} (F_{ij}^{\ell} - P_{ij}^{\ell})^2$
+
+where:
+* $F^\ell \in \mathbb{R}^{C_\ell \times M_\ell}$ is the feature map for the current image
+* $P^\ell \in \mathbb{R}^{C_\ell \times M_\ell}$ is the feature map for the content source image
+* $M_\ell=H_\ell\times W_\ell$ is the number of elements in each feature map.
+* $w_c$ is the weight of the content loss
+
+##### style loss
+The style loss uses Gram matrix which is an approximation to the covariance matrix -- we want the **activation statistics of our generated image to match the activation statistics of our style image**, and matching the (approximate) covariance is one way to do that. Given a feature map $F^\ell$ of shape $(C_\ell, M_\ell)$, the Gram matrix has shape $(C_\ell, C_\ell)$, ie., $G_{ij}^\ell  = \sum_k F^{\ell}_{ik} F^{\ell}_{jk}$.
+
+For a given layer $\ell$, the style loss is:
+$L_s^\ell = w_\ell \sum_{i, j} \left(G^\ell_{ij} - A^\ell_{ij}\right)^2$
+
+where:
+* $G^\ell$ is the Gram matrix from the feature map of the current image
+* $A^\ell$ is the Gram Matrix from the feature map of the source style image
+* $w_\ell$ is the weight of the style loss
+
+In practice we usually compute the style loss at a set of layers, rather than just a single layer. In this case, just sum up the style loss of all the layers concerned.
+
+##### Total variation loss
+The total variation loss is to encourage smoothness in the image. 
+
+The "total variation" is computed as the sum of the squares of differences in the pixel values for all pairs of pixels that are next to each other (horizontally or vertically):
+
+$L_{tv} = w_t \times \left(\sum_{c=1}^3\sum_{i=1}^{H-1}\sum_{j=1}^{W} (x_{i+1,j,c} - x_{i,j,c})^2 + \sum_{c=1}^3\sum_{i=1}^{H}\sum_{j=1}^{W - 1} (x_{i,j+1,c} - x_{i,j,c})^2\right)$
+
+Since we only compute total variation loss of the generated image, $C$ is always 3 for a RGB image.
+
+#### Training
+* extract features of content and style images using a trained ConvNet. 
+* initialize the generated image as random noise or just a copy of the original content image. Set `image.required_grad_(True)`.
+* At each training iteration:
+  * extract features of the generated image
+  * compute loss as described above
+  * propagate back gradients into the image tensor
+  
+That's it.
+
 
 ## Resnet for CIFAR-10
 
