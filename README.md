@@ -1,5 +1,5 @@
 
-Stanford CS231n 2024 assignments. and replication of ResNet for CIFAR-10.
+Stanford CS231n 2024 assignments, plus style transfer from 2020, and replication of ResNet for CIFAR-10.
 
 ## Assignment 1
 
@@ -95,19 +95,21 @@ The content loss is given by, for a given layer $\ell$:
 $L_c = w_c \times \sum_{i,j} (F_{ij}^{\ell} - P_{ij}^{\ell})^2$
 
 where:
-* $F^\ell \in \mathbb{R}^{C_\ell \times M_\ell}$ is the feature map for the current image
-* $P^\ell \in \mathbb{R}^{C_\ell \times M_\ell}$ is the feature map for the content source image
-* $M_\ell=H_\ell\times W_\ell$ is the number of elements in each feature map.
+* $F^\ell \in \mathbb{R}^{C_\ell \times M_\ell}$ is the feature map of the current generated image
+* $P^\ell \in \mathbb{R}^{C_\ell \times M_\ell}$ is the feature map of the content source image
+* $C_\ell$ is the number of filters/channels in layer $\ell$, and $M_\ell=H_\ell\times W_\ell$ is the number of elements in each feature map.
 * $w_c$ is the weight of the content loss
 
 ##### style loss
-The style loss uses Gram matrix which is an approximation to the covariance matrix -- we want the **activation statistics of our generated image to match the activation statistics of our style image**, and matching the (approximate) covariance is one way to do that. Given a feature map $F^\ell$ of shape $(C_\ell, M_\ell)$, the Gram matrix has shape $(C_\ell, C_\ell)$, ie., $G_{ij}^\ell  = \sum_k F^{\ell}_{ik} F^{\ell}_{jk}$.
+The style loss uses Gram matrix which is an approximation to the covariance matrix -- we want the **activation statistics of our generated image to match the activation statistics of our style image**, and matching the (approximate) covariance is one way to do that. 
+
+Given a feature map $F^\ell$ of shape $(C_\ell, M_\ell)$, the Gram matrix has shape $(C_\ell, C_\ell)$, ie., $G_{ij}^{\ell}=\sum_k F_{ik}^{\ell}F_{jk}^{\ell}$.
 
 For a given layer $\ell$, the style loss is:
 $L_s^\ell = w_\ell \sum_{i, j} \left(G^\ell_{ij} - A^\ell_{ij}\right)^2$
 
 where:
-* $G^\ell$ is the Gram matrix from the feature map of the current image
+* $G^\ell$ is the Gram matrix from the feature map of the current generated image
 * $A^\ell$ is the Gram Matrix from the feature map of the source style image
 * $w_\ell$ is the weight of the style loss
 
@@ -123,12 +125,12 @@ $L_{tv} = w_t \times \left(\sum_{c=1}^3\sum_{i=1}^{H-1}\sum_{j=1}^{W} (x_{i+1,j,
 Since we only compute total variation loss of the generated image, $C$ is always 3 for a RGB image.
 
 #### Training
-* extract features of content and style images using a trained ConvNet. 
+* extract features of the content and style images using a trained ConvNet. 
 * initialize the generated image as random noise or just a copy of the original content image. Set `image.required_grad_(True)`.
 * At each training iteration:
   * extract features of the generated image
   * compute loss as described above
-  * propagate back gradients into the image tensor
+  * propagate back gradients into the image tensor to update it
   
 That's it.
 
