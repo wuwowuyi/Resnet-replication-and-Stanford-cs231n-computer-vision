@@ -147,3 +147,7 @@ So in total there are 20 layers, with 269914 (0.27 MB) parameters.
 The validation and test accuracy on CIFAR-10 are between 91.5-92.0 %, consistent with the paper.
 
 It is pretty cool that such a small network has so good performance.
+
+<img src="resnet/asset/resnet_training.png" alt="resnet training acc" width="550"/>
+
+See [Wandb training log here](https://wandb.ai/dalucheng/restnet-cifar10/runs/wjjktvta). 
